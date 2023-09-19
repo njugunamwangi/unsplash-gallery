@@ -1,23 +1,40 @@
 import './App.css';
-import {useEffect, useState} from "react";
-import InfiniteScroll from 'react-infinite-scroll-component'
+import { useCallback, useEffect, useState } from "react";
+import InfiniteScroll from 'react-infinite-scroll-component';
 
-const accessKey = process.env.REACT_APP_UNSPLASH_ACCESS_KEY
+const accessKey = process.env.REACT_APP_UNSPLASH_ACCESS_KEY;
 
-function App() {
-    const [ images, setImages ] = useState([])
-    const [ page, setPage ] = useState(1)
+export default function App() {
+    const [images, setImages] = useState([]);
+    const [query, setQuery] = useState('');
+    const [page, setPage] = useState(1);
 
-    useEffect(() => {
-        getPhotos()
-    }, [page])
+    const getPhotos = useCallback(() => {
+        let apiUrl = `https://api.unsplash.com/photos?`;
+        if (query) {
+            apiUrl = `https://api.unsplash.com/search/photos?query=${query}`;
+        }
 
-    function getPhotos() {
-        fetch(`https://api.unsplash.com/photos/?client_id=${accessKey}&page=${page}`)
+        apiUrl += `&page=${page}`;
+        apiUrl += `&client_id=${accessKey}`;
+
+        fetch(apiUrl)
             .then((res) => res.json())
             .then((data) => {
-                setImages((images) => [...images, ...data])
-            })
+                const imagesFromApi = data.results ?? data
+                if (page === 1) setImages(imagesFromApi)
+                setImages((images) => [...images, ...imagesFromApi]);
+            });
+    }, [page, query]);
+
+    useEffect(() => {
+        getPhotos();
+    }, [getPhotos]);
+
+    function searchPhotos(ev) {
+        ev.preventDefault();
+        setPage(1);
+        getPhotos();
     }
 
     if (!accessKey) {
@@ -46,7 +63,7 @@ function App() {
                 Unsplash image gallery
             </h1>
 
-            <form className="flex mb-8 items-center">
+            <form onSubmit={searchPhotos} className="flex mb-8 items-center">
                 <label htmlFor="simple-search" className="sr-only">Search</label>
                 <div className="relative w-full">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -56,9 +73,13 @@ function App() {
                                   d="M3 5v10M3 5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm0 0V6a3 3 0 0 0-3-3H9m1.5-2-2 2 2 2"/>
                         </svg>
                     </div>
-                    <input type="text" id="simple-search"
+                    <input type="text"
+                           id="simple-search"
+                           value={query}
+                           onChange={(ev) => setQuery(ev.target.value)}
                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                           placeholder="Search image..." required />
+                           placeholder="Search image..."
+                           required />
                 </div>
                 <button type="submit"
                         className="p-2.5 ml-2 text-sm font-medium text-white bg-blue-700 rounded-lg border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
@@ -72,7 +93,7 @@ function App() {
             </form>
 
             <InfiniteScroll
-                dataLength={images.length} //This is important field to render the next data
+                dataLength={images.length}
                 next={() => setPage((page) => page + 1)}
                 hasMore={true}
                 loader={<h4>Loading...</h4>}
@@ -80,7 +101,10 @@ function App() {
                     <p style={{ textAlign: 'center' }}>
                         <b>Yay! You have seen it all</b>
                     </p>
-                }>
+                }
+                scrollThreshold={0.8}
+            >
+
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {images.map((image, index) => (
                         <div key={index}>
@@ -90,11 +114,6 @@ function App() {
                     ))}
                 </div>
             </InfiniteScroll>
-
-
-
         </div>
     );
 }
-
-export default App;
