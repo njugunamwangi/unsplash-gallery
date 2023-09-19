@@ -1,16 +1,24 @@
 import './App.css';
 import {useEffect, useState} from "react";
+import InfiniteScroll from 'react-infinite-scroll-component'
 
 const accessKey = process.env.REACT_APP_UNSPLASH_ACCESS_KEY
 
 function App() {
     const [ images, setImages ] = useState([])
+    const [ page, setPage ] = useState(1)
 
     useEffect(() => {
-        fetch(`https://api.unsplash.com/photos/?client_id=${accessKey}`)
+        getPhotos()
+    }, [page])
+
+    function getPhotos() {
+        fetch(`https://api.unsplash.com/photos/?client_id=${accessKey}&page=${page}`)
             .then((res) => res.json())
-            .then(setImages)
-    }, [])
+            .then((data) => {
+                setImages((images) => [...images, ...data])
+            })
+    }
 
     if (!accessKey) {
         return (
@@ -63,15 +71,27 @@ function App() {
                 </button>
             </form>
 
+            <InfiniteScroll
+                dataLength={images.length} //This is important field to render the next data
+                next={() => setPage((page) => page + 1)}
+                hasMore={true}
+                loader={<h4>Loading...</h4>}
+                endMessage={
+                    <p style={{ textAlign: 'center' }}>
+                        <b>Yay! You have seen it all</b>
+                    </p>
+                }>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {images.map((image, index) => (
+                        <div key={index}>
+                            <img className="h-auto max-w-full rounded-lg"
+                                 src={image.urls.regular} alt={image.alt_description} />
+                        </div>
+                    ))}
+                </div>
+            </InfiniteScroll>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {images.map((image, index) => (
-                    <div key={index}>
-                        <img className="h-auto max-w-full rounded-lg"
-                             src={image.urls.regular} alt={image.alt_description} />
-                    </div>
-                ))}
-            </div>
+
 
         </div>
     );
